@@ -1,6 +1,9 @@
 #PCA是基概念在AI中的经典应用——寻找数据的最优基（主成分）
 #可视化结果（matplotlib.pyplot）
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    print("请先安装 matplotlib 库: pip install matplotlib")
 import numpy as np
 
 def manual_pca_demo():
