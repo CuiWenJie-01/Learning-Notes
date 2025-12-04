@@ -358,3 +358,108 @@ KKT条件（Karush-Kuhn-Tucker条件）是优化理论中用于确定约束优�
 4. **梯度条件**：权重向量 <span style="font-size:1.8em">$w = \sum \alpha_i y_i x_i$ </span> 且 <span style="font-size:1.8em">$\sum \alpha_i y_i = 0$</span>
 
 这些条件确保了SVM模型在找到最优分类超平面时的数学严谨性。
+
+---
+# VAE是什么？
+VAE是**Variational Autoencoder**（变分自编码器）的缩写，它是一种重要的生成模型。根据你提供的代码上下文，我可以为你详细解释：
+
+## VAE的基本概念
+
+VAE是一种基于概率论的深度学习生成模型，结合了传统自编码器的结构和贝叶斯推断的思想。
+
+## VAE的核心组成部分
+
+1. **编码器（Encoder）**：将输入数据映射到潜在空间的分布参数
+   - 输出潜在变量z的均值(`mu`)和方差(`logvar`)
+   - 对应代码中的 `encode` 方法
+
+2. **潜在空间（Latent Space）**：低维表示空间
+   - 通过重参数化技巧采样：`z = μ + σ ⊙ ε`
+   - 保证梯度可传导
+
+3. **解码器（Decoder）**：从潜在表示重构数据
+   - 将潜在变量映射回数据空间
+   - 对应代码中的 `decode` 方法
+
+## VAE的概率原理
+
+根据代码中的实现，VAE涉及三种重要分布：
+
+- **近似后验分布**: `q(z|x) = N(z; μ(x), σ²(x)I)`
+- **先验分布**: `p(z) = N(z; 0, I)` （标准正态分布）
+- **似然函数**: `p(x|z) = N(x; μ(z), σ²(z)I)`
+
+## 训练目标
+
+最大化证据下界（ELBO）:
+```
+ELBO = E[log p(x|z)] - KL(q(z|x) || p(z))
+```
+
+
+其中：
+- 第一项是重构损失（Reconstruction Loss）
+- 第二项是KL散度损失，使编码分布接近先验分布
+
+这种设计让VAE能够学习数据的有效表示，并能从潜在空间生成新的数据样本。
+
+---
+## z = μ + σ ε 各个符号都表示什么意思？
+这是VAE（变分自编码器）中的**重参数化技巧**（reparameterization trick）公式。各符号含义如下：
+
+- [z](file://C:\Users\EDY\Desktop\code\Learning-Notes\线性代数\第3章：线性映射\AI项目实战\实战项目1：构建简单的图像分类器\data\MNIST\raw\t10k-images-idx3-ubyte.gz)：潜在变量（latent variable），是从潜在空间分布中采样的具体值
+- `μ`（mu）：潜在分布的均值（mean），由编码器网络输出
+- `σ`（sigma）：潜在分布的标准差（standard deviation），由编码器网络输出
+- `ε`（epsilon）：从标准正态分布中采样的噪声，即 `ε ~ N(0, I)`
+
+## 作用说明
+
+这个公式的目的是：
+1. **实现随机采样**：从分布 `N(μ, σ²)` 中采样得到具体的潜在变量 [z](file://C:\Users\EDY\Desktop\code\Learning-Notes\线性代数\第3章：线性映射\AI项目实战\实战项目1：构建简单的图像分类器\data\MNIST\raw\t10k-images-idx3-ubyte.gz)
+2. **保持梯度流动**：通过分离随机性和确定性部分，使得梯度可以通过确定性的 `μ` 和 `σ` 参数传播
+3. **支持反向传播**：直接对分布参数进行优化，而不是对采样操作本身求导
+
+在代码中对应的是 `reparameterize` 方法：
+```
+def reparameterize(self, mu, logvar):
+    std = torch.exp(0.5 * logvar)  # 计算标准差σ
+    eps = torch.randn_like(std)    # 采样ε
+    return mu + eps * std          # 计算z = μ + σ⊙ε
+```
+
+---
+
+## 这些公式的各个符号表示什么意思？
+```
+近似后验分布: q(z|x) = N(z; μ(x), σ²(x)I)
+先验分布: p(z) = N(z; 0, I) （标准正态分布）
+似然函数: p(x|z) = N(x; μ(z), σ²(z)I)
+``` 
+
+让我详细解释这些VAE中关键公式的符号含义：
+
+## 1. 近似后验分布: `q(z|x) = N(z; μ(x), σ²(x)I)`
+
+- `q(z|x)`: 给定观测数据 [x](file://C:\Users\EDY\Desktop\code\Learning-Notes\.venv\Lib\site-packages\matplotlib\tests\test_triangulation.py#L14-L14) 时潜在变量 [z](file://C:\Users\EDY\Desktop\code\Learning-Notes\线性代数\第3章：线性映射\AI项目实战\实战项目1：构建简单的图像分类器\data\MNIST\raw\t10k-images-idx3-ubyte.gz) 的近似后验分布
+- `N(z; μ(x), σ²(x)I)`: 均值为 `μ(x)`、协方差矩阵为 `σ²(x)I` 的多元正态分布
+- [z](file://C:\Users\EDY\Desktop\code\Learning-Notes\线性代数\第3章：线性映射\AI项目实战\实战项目1：构建简单的图像分类器\data\MNIST\raw\t10k-images-idx3-ubyte.gz): 潜在变量（latent variable），是数据的低维表示
+- [x](file://C:\Users\EDY\Desktop\code\Learning-Notes\.venv\Lib\site-packages\matplotlib\tests\test_triangulation.py#L14-L14): 观测数据（observed data）
+- `μ(x)`: 编码器网络输出的均值，是数据 [x](file://C:\Users\EDY\Desktop\code\Learning-Notes\.venv\Lib\site-packages\matplotlib\tests\test_triangulation.py#L14-L14) 的函数
+- `σ²(x)`: 编码器网络输出的方差，是数据 [x](file://C:\Users\EDY\Desktop\code\Learning-Notes\.venv\Lib\site-packages\matplotlib\tests\test_triangulation.py#L14-L14) 的函数
+- `I`: 单位矩阵，表示各维度独立
+
+## 2. 先验分布: `p(z) = N(z; 0, I)`
+
+- `p(z)`: 潜在变量 [z](file://C:\Users\EDY\Desktop\code\Learning-Notes\线性代数\第3章：线性映射\AI项目实战\实战项目1：构建简单的图像分类器\data\MNIST\raw\t10k-images-idx3-ubyte.gz) 的先验分布
+- `N(z; 0, I)`: 均值为0、协方差矩阵为单位矩阵的标准正态分布
+- `0`: 零向量，表示均值
+- `I`: 单位矩阵，表示单位协方差
+
+## 3. 似然函数: `p(x|z) = N(x; μ(z), σ²(z)I)`
+
+- `p(x|z)`: 给定潜在变量 [z](file://C:\Users\EDY\Desktop\code\Learning-Notes\线性代数\第3章：线性映射\AI项目实战\实战项目1：构建简单的图像分类器\data\MNIST\raw\t10k-images-idx3-ubyte.gz) 时观测数据 [x](file://C:\Users\EDY\Desktop\code\Learning-Notes\.venv\Lib\site-packages\matplotlib\tests\test_triangulation.py#L14-L14) 的条件分布（似然函数）
+- `N(x; μ(z), σ²(z)I)`: 均值为 `μ(z)`、协方差矩阵为 `σ²(z)I` 的多元正态分布
+- `μ(z)`: 解码器网络输出的均值，是潜在变量 [z](file://C:\Users\EDY\Desktop\code\Learning-Notes\线性代数\第3章：线性映射\AI项目实战\实战项目1：构建简单的图像分类器\data\MNIST\raw\t10k-images-idx3-ubyte.gz) 的函数
+- `σ²(z)`: 解码器网络输出的方差，是潜在变量 [z](file://C:\Users\EDY\Desktop\code\Learning-Notes\线性代数\第3章：线性映射\AI项目实战\实战项目1：构建简单的图像分类器\data\MNIST\raw\t10k-images-idx3-ubyte.gz) 的函数
+
+这些分布构成了VAE的概率框架，通过优化它们之间的关系来实现数据生成和表征学习。
