@@ -17,15 +17,15 @@ def parameter_estimation_model_training():
         print("\n1. 最大似然估计在线性回归中的应用:")
 
         # 生成模拟数据
-        np.random.seed(42)
-        n_samples = 100
-        true_slope = 2.5
-        true_intercept = 1.0
-        noise_std = 0.5
+        np.random.seed(42)  # 固定随机种子以确保可重复性
+        n_samples = 100 # 样本数量
+        true_slope = 2.5 # 真实斜率
+        true_intercept = 1.0 # 真实截距
+        noise_std = 0.5 # 噪声标准差
 
-        X = np.linspace(0, 1, n_samples)
-        true_y = true_slope * X + true_intercept
-        y = true_y + np.random.normal(0, noise_std, n_samples)
+        X = np.linspace(0, 1, n_samples) # 生成特征向量（输入变量）
+        true_y = true_slope * X + true_intercept  # 生成真实响应变量（输出变量）
+        y = true_y + np.random.normal(0, noise_std, n_samples) # 生成带噪声的响应变量
 
         # 最大似然估计推导
         # 假设 y_i ~ N(wx_i + b, σ²)
@@ -34,14 +34,21 @@ def parameter_estimation_model_training():
         # 对σ²求导得到 σ²_MLE = 1/n Σ(y_i - wx_i - b)²
 
         # 使用最小二乘法估计w, b（等价于MLE）
-        X_design = np.column_stack([X, np.ones_like(X)])  # 添加截距项
+        # 构造设计矩阵，将特征X和截距项（全为1的列）合并
+        X_design = np.column_stack([X, np.ones_like(X)])
+        # 使用正规方程求解线性回归参数，这是MLE在正态分布假设下的解析解
         w_b_hat = np.linalg.inv(X_design.T @ X_design) @ X_design.T @ y
+        # 提取斜率参数估计值
         w_mle = w_b_hat[0]
+        # 提取截距参数估计值
         b_mle = w_b_hat[1]
 
         # 估计噪声方差
+        # 根据估计的参数计算预测值
         y_pred = w_mle * X + b_mle
+        # 计算残差（实际值与预测值的差异）
         residuals = y - y_pred
+        # 估计噪声方差，即残差平方的均值（MLE估计）
         sigma2_mle = np.mean(residuals ** 2)
 
         print(f"真实参数: w={true_slope:.4f}, b={true_intercept:.4f}, σ={noise_std:.4f}")
@@ -61,20 +68,28 @@ def parameter_estimation_model_training():
         axes[0, 0].grid(True, alpha=0.3)
 
         # 对数似然函数曲面
+        # 定义权重参数w的取值范围，从1.5到3.5均匀生成50个点
         w_range = np.linspace(1.5, 3.5, 50)
+        # 定义偏置参数b的取值范围，从0到2均匀生成50个点
         b_range = np.linspace(0, 2, 50)
+        # 创建网格点矩阵，W和B都是50x50的二维数组，包含所有参数组合
         W, B = np.meshgrid(w_range, b_range)
 
         # 计算对数似然（忽略常数项）
+        # 初始化对数似然函数矩阵，形状与参数网格W相同，用于存储每个参数组合对应的对数似然值
         log_likelihood = np.zeros_like(W)
+        # 获取样本数量，用于后续计算
         n = len(X)
 
+        # 遍历所有参数组合的网格点
         for i in range(W.shape[0]):
             for j in range(W.shape[1]):
+                # 获取当前网格点的权重和偏置参数值
                 w = W[i, j]
                 b = B[i, j]
+                # 计算当前参数下的残差
                 residuals = y - (w * X + b)
-                # 忽略常数项的对数似然
+                # 计算对数似然值（忽略常数项）并存储到对应位置
                 log_likelihood[i, j] = -0.5 * n * np.log(np.mean(residuals ** 2))
 
         contour = axes[0, 1].contour(W, B, log_likelihood, levels=20)
@@ -123,19 +138,22 @@ def parameter_estimation_model_training():
         print(f"\n参数估计的置信区间 (95%):")
 
         # 计算标准误差
+        # 构造设计矩阵，将特征X和截距项（全为1的列）合并
         X_design = np.column_stack([X, np.ones_like(X)])
+        # 计算噪声标准差的估计值
         sigma_hat = np.sqrt(sigma2_mle)
+        # 计算参数估计的协方差矩阵，用于置信区间计算
         var_cov_matrix = sigma2_mle * np.linalg.inv(X_design.T @ X_design)
 
         # w的置信区间
-        se_w = np.sqrt(var_cov_matrix[0, 0])
-        w_ci_lower = w_mle - 1.96 * se_w
-        w_ci_upper = w_mle + 1.96 * se_w
+        se_w = np.sqrt(var_cov_matrix[0, 0])#w标准误差
+        w_ci_lower = w_mle - 1.96 * se_w#w置信区间下限
+        w_ci_upper = w_mle + 1.96 * se_w#w置信区间上限
 
         # b的置信区间
-        se_b = np.sqrt(var_cov_matrix[1, 1])
-        b_ci_lower = b_mle - 1.96 * se_b
-        b_ci_upper = b_mle + 1.96 * se_b
+        se_b = np.sqrt(var_cov_matrix[1, 1])#b标准误差
+        b_ci_lower = b_mle - 1.96 * se_b#b置信区间下限
+        b_ci_upper = b_mle + 1.96 * se_b#b置信区间上限
 
         print(f"w的95%置信区间: [{w_ci_lower:.4f}, {w_ci_upper:.4f}]")
         print(f"b的95%置信区间: [{b_ci_lower:.4f}, {b_ci_upper:.4f}]")
@@ -162,7 +180,7 @@ def parameter_estimation_model_training():
 
         # 生成数据
         X = np.random.randn(n_samples, n_features)
-        noise_std = 0.5
+        noise_std = 0.5 # 噪声标准差
         y = X @ true_w + np.random.normal(0, noise_std, n_samples)
 
         print(f"高维数据:")
@@ -213,7 +231,9 @@ def parameter_estimation_model_training():
             ax.grid(True, alpha=0.3)
 
             # 计算稀疏性
+            # 计算权重的稀疏度，即接近零的权重比例（绝对值小于1e-3的权重占总权重的比例）
             sparsity = np.sum(np.abs(weights) < 1e-3) / n_features
+            # 在图表上添加文本标注，显示稀疏度信息
             ax.text(0.05, 0.95, f'稀疏度: {sparsity:.1%}',
                     transform=ax.transAxes, fontsize=10, verticalalignment='top',
                     bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
@@ -231,7 +251,7 @@ def parameter_estimation_model_training():
         bayesian_model = fitted_models['贝叶斯岭回归']
         if hasattr(bayesian_model, 'sigma_'):
             # 后验方差
-            posterior_var = bayesian_model.sigma_
+            posterior_var = bayesian_model.sigma_ # 后验协方差矩阵
 
             print(f"\n贝叶斯岭回归的后验分析:")
             print(f"  估计的噪声方差: {bayesian_model.alpha_:.4f}")
@@ -283,7 +303,7 @@ def parameter_estimation_model_training():
             [[0.5, 0.2], [0.2, 0.5]],
             [[0.8, -0.3], [-0.3, 0.8]],
             [[0.4, 0.0], [0.0, 0.4]]
-        ])
+        ])# 协方差矩阵
 
         # 生成数据
         X_gmm = []
@@ -310,6 +330,11 @@ def parameter_estimation_model_training():
         print(f"  真实混合权重: {true_weights}")
 
         # EM算法实现
+        '''
+        n_components=3：指定高斯混合模型中的组件数量为3，即假设有3个不同的高斯分布混合而成
+        max_iter=100：设置EM算法的最大迭代次数为100次，防止算法无限循环
+        tol=1e-4：设定收敛阈值为0.0001，当两次迭代间的对数似然变化小于此值时认为算法已收敛
+        '''
         def em_gmm(X, n_components=3, max_iter=100, tol=1e-4):
             """EM算法估计GMM参数"""
             n_samples, n_features = X.shape
@@ -324,11 +349,25 @@ def parameter_estimation_model_training():
             means = kmeans.cluster_centers_
 
             # 初始化协方差矩阵
+            '''
+            为什么要判断 len(cluster_points) > 1？
+            这是因为计算协方差矩阵需要至少2个数据点才能有意义：
+            协方差的定义要求：协方差衡量的是两个变量之间的线性关系，需要多个样本点才能计算出有效的统计量。单个点无法反映变量间的关系。
+            数学上的限制：
+            当只有一个样本点时，np.cov() 会返回一个数值而不是矩阵
+            协方差矩阵需要反映不同维度之间的关系，单一数据点无法提供这种信息
+            数值稳定性考虑：
+            当聚类中样本点过少时，直接使用单位矩阵 np.eye(n_features) * 0.1 作为初始协方差矩阵
+            这样既避免了计算错误，又提供了一个合理的初始值供后续EM迭代优化
+            这是一种常见的鲁棒性处理方式，确保算法在各种数据分布情况下都能正常运行。
+            '''
             covs = np.zeros((n_components, n_features, n_features))
             for k in range(n_components):
-                cluster_points = X[kmeans.labels_ == k]
+                cluster_points = X[kmeans.labels_ == k] # 获取该类别的样本点
+                # 如果该聚类中的样本点数量大于1，则计算协方差矩阵
                 if len(cluster_points) > 1:
                     covs[k] = np.cov(cluster_points.T)
+                # 如果该聚类中只有一个样本点或没有样本点，则使用单位矩阵乘以0.1作为协方差矩阵
                 else:
                     covs[k] = np.eye(n_features) * 0.1
 
